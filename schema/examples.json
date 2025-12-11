@@ -1,0 +1,182 @@
+[
+  {
+    "_comment": "Example 1: New procedural request - starting a multi-step task",
+    "input": {
+      "event_id": "evt_example_001",
+      "user_message": "close issue #270",
+      "timestamp": "2025-12-10T15:30:00",
+      "routed_instructions": ["issue_closure.instructions"]
+    },
+    "output": {
+      "event_id": "evt_example_001",
+      "tags": {
+        "is_new_request": true,
+        "is_followup": false,
+        "is_correction": false,
+        "request_type": "procedural",
+        "expected_outcome": "issue_closed_with_checklist_executed",
+        "session_id": "session_001",
+        "request_sequence": 1,
+        "confidence": "high"
+      }
+    }
+  },
+  {
+    "_comment": "Example 2: Followup - checking on previous work (iteration indicator)",
+    "input": {
+      "event_id": "evt_example_002",
+      "user_message": "did you add the work log entry?",
+      "timestamp": "2025-12-10T15:35:00",
+      "routed_instructions": ["work_logging.instructions"]
+    },
+    "output": {
+      "event_id": "evt_example_002",
+      "tags": {
+        "is_new_request": false,
+        "is_followup": true,
+        "is_correction": false,
+        "request_type": "query",
+        "expected_outcome": "confirmation_of_work_log_entry",
+        "session_id": "session_001",
+        "request_sequence": 2,
+        "confidence": "high",
+        "notes": "User checking if procedural step was completed - indicates potential missed step"
+      }
+    }
+  },
+  {
+    "_comment": "Example 3: Correction - user correcting agent behavior (failure indicator)",
+    "input": {
+      "event_id": "evt_example_003",
+      "user_message": "no, I meant the December work log, not November",
+      "timestamp": "2025-12-10T15:37:00",
+      "routed_instructions": ["work_logging.instructions"]
+    },
+    "output": {
+      "event_id": "evt_example_003",
+      "tags": {
+        "is_new_request": false,
+        "is_followup": false,
+        "is_correction": true,
+        "request_type": "action",
+        "expected_outcome": "correct_work_log_updated",
+        "session_id": "session_001",
+        "request_sequence": 3,
+        "confidence": "high",
+        "notes": "Explicit correction - agent made wrong assumption"
+      }
+    }
+  },
+  {
+    "_comment": "Example 4: New query request - information seeking",
+    "input": {
+      "event_id": "evt_example_004",
+      "user_message": "what's the current routing engine version?",
+      "timestamp": "2025-12-10T16:00:00",
+      "routed_instructions": ["routing_engine_versioning.instructions"]
+    },
+    "output": {
+      "event_id": "evt_example_004",
+      "tags": {
+        "is_new_request": true,
+        "is_followup": false,
+        "is_correction": false,
+        "request_type": "query",
+        "expected_outcome": "version_number_displayed",
+        "session_id": "session_002",
+        "request_sequence": 1,
+        "confidence": "high"
+      }
+    }
+  },
+  {
+    "_comment": "Example 5: Action request - single discrete action",
+    "input": {
+      "event_id": "evt_example_005",
+      "user_message": "commit these changes",
+      "timestamp": "2025-12-10T16:15:00",
+      "routed_instructions": ["commit_message_format.instructions"]
+    },
+    "output": {
+      "event_id": "evt_example_005",
+      "tags": {
+        "is_new_request": true,
+        "is_followup": false,
+        "is_correction": false,
+        "request_type": "action",
+        "expected_outcome": "git_commit_created",
+        "session_id": "session_003",
+        "request_sequence": 1,
+        "confidence": "high"
+      }
+    }
+  },
+  {
+    "_comment": "Example 6: Meta request - about the system itself",
+    "input": {
+      "event_id": "evt_example_006",
+      "user_message": "how does pongogo routing work?",
+      "timestamp": "2025-12-10T16:30:00",
+      "routed_instructions": ["architecture_principles.instructions"]
+    },
+    "output": {
+      "event_id": "evt_example_006",
+      "tags": {
+        "is_new_request": true,
+        "is_followup": false,
+        "is_correction": false,
+        "request_type": "meta",
+        "expected_outcome": "routing_mechanism_explained",
+        "session_id": "session_004",
+        "request_sequence": 1,
+        "confidence": "high"
+      }
+    }
+  },
+  {
+    "_comment": "Example 7: Unclear request - ambiguous intent",
+    "input": {
+      "event_id": "evt_example_007",
+      "user_message": "can you help with this?",
+      "timestamp": "2025-12-10T17:00:00",
+      "routed_instructions": []
+    },
+    "output": {
+      "event_id": "evt_example_007",
+      "tags": {
+        "is_new_request": true,
+        "is_followup": false,
+        "is_correction": false,
+        "request_type": "unclear",
+        "expected_outcome": "clarification_requested",
+        "session_id": "session_005",
+        "request_sequence": 1,
+        "confidence": "medium",
+        "notes": "No context provided - unclear what 'this' refers to"
+      }
+    }
+  },
+  {
+    "_comment": "Example 8: Continuation within session - not new, not followup, not correction",
+    "input": {
+      "event_id": "evt_example_008",
+      "user_message": "now add it to the project board",
+      "timestamp": "2025-12-10T15:32:00",
+      "routed_instructions": ["github_project_status_workflow.instructions"]
+    },
+    "output": {
+      "event_id": "evt_example_008",
+      "tags": {
+        "is_new_request": false,
+        "is_followup": false,
+        "is_correction": false,
+        "request_type": "action",
+        "expected_outcome": "issue_added_to_project_board",
+        "session_id": "session_001",
+        "request_sequence": 4,
+        "confidence": "high",
+        "notes": "Continuation - 'now' indicates next step in sequence, not new task"
+      }
+    }
+  }
+]

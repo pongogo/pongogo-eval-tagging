@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pongogo Eval Event Tags",
+  "description": "Schema for tagging routing events with conversation and outcome metadata",
+  "type": "object",
+  "required": ["event_id", "tags"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique identifier for the routing event (from source data)"
+    },
+    "tags": {
+      "type": "object",
+      "required": ["is_new_request", "is_followup", "is_correction", "request_type", "session_id", "request_sequence"],
+      "properties": {
+        "is_new_request": {
+          "type": "boolean",
+          "description": "True if this is the START of a new task/conversation. False if continuation of existing task."
+        },
+        "is_followup": {
+          "type": "boolean",
+          "description": "True if user is asking about a previous response (e.g., 'did you do X?', 'what about Y?'). Indicates iteration."
+        },
+        "is_correction": {
+          "type": "boolean",
+          "description": "True if user is correcting agent behavior (e.g., 'no, I meant...', 'that's wrong'). Indicates failure."
+        },
+        "request_type": {
+          "type": "string",
+          "enum": ["procedural", "query", "action", "meta", "unclear"],
+          "description": "Type of request: procedural (multi-step process), query (information request), action (single action), meta (about the system), unclear (ambiguous)"
+        },
+        "expected_outcome": {
+          "type": "string",
+          "description": "What should happen if routing succeeds? Be specific. Examples: 'issue_closed_with_checklist', 'file_contents_displayed', 'commit_created'"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Identifier grouping related events into a conversation. Format: session_NNN"
+        },
+        "request_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Position within session (1 = first request, 2 = second, etc.). Must be monotonically increasing within session."
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Tagger's confidence in this annotation. Use 'low' when context is insufficient."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes explaining tagging decision, especially for edge cases"
+        }
+      }
+    }
+  }
+}

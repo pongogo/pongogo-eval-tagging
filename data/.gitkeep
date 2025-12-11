@@ -1,0 +1,3 @@
+# Placeholder for data files
+# events_to_tag.jsonl - Export from Pongogo DB
+# tagged_events.jsonl - Output from LLM tagging
