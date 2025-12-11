@@ -1,6 +1,10 @@
 [
   {
-    "_comment": "Example 1: New procedural request - starting a multi-step task",
+    "_comment": "=== TIER 1: CONVERSATION STRUCTURE (can tag from user messages alone) ===",
+    "_tier": "Examples 1-4 show tagging that requires ONLY user message data"
+  },
+  {
+    "_comment": "Example 1: New procedural request - full Epic #234 aligned tagging",
     "input": {
       "event_id": "evt_example_001",
       "user_message": "close issue #270",
@@ -13,11 +17,16 @@
         "is_new_request": true,
         "is_followup": false,
         "is_correction": false,
+        "iteration_type": "none",
         "request_type": "procedural",
-        "expected_outcome": "issue_closed_with_checklist_executed",
         "session_id": "session_001",
         "request_sequence": 1,
-        "confidence": "high"
+        "expected_outcome": "issue_closed_with_checklist_executed",
+        "expected_first_pass_success": true,
+        "context_sufficient": true,
+        "confidence": "high",
+        "requires_agent_response": false,
+        "notes": "Clear procedural request with specific target (issue #270)"
       }
     }
   },
@@ -35,12 +44,16 @@
         "is_new_request": false,
         "is_followup": true,
         "is_correction": false,
+        "iteration_type": "clarification",
         "request_type": "query",
-        "expected_outcome": "confirmation_of_work_log_entry",
         "session_id": "session_001",
         "request_sequence": 2,
+        "expected_outcome": "confirmation_of_work_log_entry",
+        "expected_first_pass_success": true,
+        "context_sufficient": true,
         "confidence": "high",
-        "notes": "User checking if procedural step was completed - indicates potential missed step"
+        "requires_agent_response": false,
+        "notes": "User checking if procedural step was completed - THIS IS AN ITERATION"
       }
     }
   },
@@ -58,124 +71,178 @@
         "is_new_request": false,
         "is_followup": false,
         "is_correction": true,
+        "iteration_type": "correction",
         "request_type": "action",
-        "expected_outcome": "correct_work_log_updated",
         "session_id": "session_001",
         "request_sequence": 3,
+        "expected_outcome": "correct_work_log_updated",
+        "expected_first_pass_success": false,
+        "context_sufficient": false,
+        "missing_context": "Month specification was ambiguous in original request",
         "confidence": "high",
-        "notes": "Explicit correction - agent made wrong assumption"
+        "requires_agent_response": false,
+        "notes": "Explicit correction - agent made wrong assumption about month"
       }
     }
   },
   {
-    "_comment": "Example 4: New query request - information seeking",
+    "_comment": "Example 4: Missing context leads to iteration",
     "input": {
       "event_id": "evt_example_004",
-      "user_message": "what's the current routing engine version?",
-      "timestamp": "2025-12-10T16:00:00",
-      "routed_instructions": ["routing_engine_versioning.instructions"]
-    },
-    "output": {
-      "event_id": "evt_example_004",
-      "tags": {
-        "is_new_request": true,
-        "is_followup": false,
-        "is_correction": false,
-        "request_type": "query",
-        "expected_outcome": "version_number_displayed",
-        "session_id": "session_002",
-        "request_sequence": 1,
-        "confidence": "high"
-      }
-    }
-  },
-  {
-    "_comment": "Example 5: Action request - single discrete action",
-    "input": {
-      "event_id": "evt_example_005",
-      "user_message": "commit these changes",
-      "timestamp": "2025-12-10T16:15:00",
-      "routed_instructions": ["commit_message_format.instructions"]
-    },
-    "output": {
-      "event_id": "evt_example_005",
-      "tags": {
-        "is_new_request": true,
-        "is_followup": false,
-        "is_correction": false,
-        "request_type": "action",
-        "expected_outcome": "git_commit_created",
-        "session_id": "session_003",
-        "request_sequence": 1,
-        "confidence": "high"
-      }
-    }
-  },
-  {
-    "_comment": "Example 6: Meta request - about the system itself",
-    "input": {
-      "event_id": "evt_example_006",
-      "user_message": "how does pongogo routing work?",
-      "timestamp": "2025-12-10T16:30:00",
-      "routed_instructions": ["architecture_principles.instructions"]
-    },
-    "output": {
-      "event_id": "evt_example_006",
-      "tags": {
-        "is_new_request": true,
-        "is_followup": false,
-        "is_correction": false,
-        "request_type": "meta",
-        "expected_outcome": "routing_mechanism_explained",
-        "session_id": "session_004",
-        "request_sequence": 1,
-        "confidence": "high"
-      }
-    }
-  },
-  {
-    "_comment": "Example 7: Unclear request - ambiguous intent",
-    "input": {
-      "event_id": "evt_example_007",
-      "user_message": "can you help with this?",
-      "timestamp": "2025-12-10T17:00:00",
+      "user_message": "which file?",
+      "timestamp": "2025-12-10T16:05:00",
       "routed_instructions": []
     },
     "output": {
+      "event_id": "evt_example_004",
+      "tags": {
+        "is_new_request": false,
+        "is_followup": true,
+        "is_correction": false,
+        "iteration_type": "clarification",
+        "request_type": "query",
+        "session_id": "session_002",
+        "request_sequence": 2,
+        "expected_outcome": "file_path_clarified",
+        "expected_first_pass_success": false,
+        "context_sufficient": false,
+        "missing_context": "Agent mentioned file but didn't specify path",
+        "confidence": "high",
+        "requires_agent_response": false,
+        "notes": "User needs clarification - indicates incomplete agent response"
+      }
+    }
+  },
+  {
+    "_comment": "=== TIER 2: OUTCOME & ANTI-PATTERN (requires agent_response data) ===",
+    "_tier": "Examples 5-8 show fields that need agent response to fully tag"
+  },
+  {
+    "_comment": "Example 5: Anti-pattern detected - time estimate in output",
+    "_note": "This example shows FULL tagging when agent_response IS available",
+    "input": {
+      "event_id": "evt_example_005",
+      "user_message": "help me plan the migration",
+      "timestamp": "2025-12-10T17:00:00",
+      "routed_instructions": ["development_workflow.instructions"],
+      "agent_response": "I'll help you plan the migration. This should take approximately 2-3 weeks to complete..."
+    },
+    "output": {
+      "event_id": "evt_example_005",
+      "tags": {
+        "is_new_request": true,
+        "is_followup": false,
+        "is_correction": false,
+        "iteration_type": "none",
+        "request_type": "procedural",
+        "session_id": "session_003",
+        "request_sequence": 1,
+        "expected_outcome": "migration_plan_created_without_timeline",
+        "expected_first_pass_success": true,
+        "outcome_observed": "partial",
+        "outcome_notes": "Plan created but included time estimate anti-pattern",
+        "anti_pattern_detected": true,
+        "anti_pattern_type": "time_estimate_in_output",
+        "preventive_instruction": "time_free_project_management.instructions.md",
+        "preventive_instruction_was_routed": false,
+        "context_sufficient": true,
+        "confidence": "high",
+        "requires_agent_response": true,
+        "notes": "ROUTING FAILURE: time_free instruction NOT routed, so anti-pattern not prevented"
+      }
+    }
+  },
+  {
+    "_comment": "Example 6: Anti-pattern - checklist skipped (memory over routing)",
+    "input": {
+      "event_id": "evt_example_006",
+      "user_message": "close issue #200",
+      "timestamp": "2025-12-10T18:00:00",
+      "routed_instructions": ["issue_closure.instructions"],
+      "agent_response": "I'll close issue #200 for you. [Closes issue without reading checklist]"
+    },
+    "output": {
+      "event_id": "evt_example_006",
+      "tags": {
+        "is_new_request": true,
+        "is_followup": false,
+        "is_correction": false,
+        "iteration_type": "none",
+        "request_type": "procedural",
+        "session_id": "session_004",
+        "request_sequence": 1,
+        "expected_outcome": "issue_closed_with_checklist_executed",
+        "expected_first_pass_success": true,
+        "outcome_observed": "failure",
+        "outcome_notes": "Issue closed but checklist was not followed",
+        "anti_pattern_detected": true,
+        "anti_pattern_type": "skipped_checklist",
+        "preventive_instruction": "issue_closure.instructions.md",
+        "preventive_instruction_was_routed": true,
+        "context_sufficient": true,
+        "confidence": "high",
+        "requires_agent_response": true,
+        "notes": "INSTRUCTION QUALITY ISSUE: Instruction was routed but agent ignored it"
+      }
+    }
+  },
+  {
+    "_comment": "Example 7: Success - agent followed routed instructions",
+    "input": {
+      "event_id": "evt_example_007",
+      "user_message": "create a commit for these changes",
+      "timestamp": "2025-12-10T19:00:00",
+      "routed_instructions": ["commit_message_format.instructions"],
+      "agent_response": "I'll create a commit with a properly formatted message following the guidelines..."
+    },
+    "output": {
       "event_id": "evt_example_007",
       "tags": {
         "is_new_request": true,
         "is_followup": false,
         "is_correction": false,
-        "request_type": "unclear",
-        "expected_outcome": "clarification_requested",
+        "iteration_type": "none",
+        "request_type": "action",
         "session_id": "session_005",
         "request_sequence": 1,
-        "confidence": "medium",
-        "notes": "No context provided - unclear what 'this' refers to"
+        "expected_outcome": "commit_created_with_formatted_message",
+        "expected_first_pass_success": true,
+        "outcome_observed": "success",
+        "outcome_notes": "Agent followed commit message format guidelines",
+        "anti_pattern_detected": false,
+        "context_sufficient": true,
+        "confidence": "high",
+        "requires_agent_response": true,
+        "notes": "SUCCESS: Routing worked, agent complied, outcome achieved"
       }
     }
   },
   {
-    "_comment": "Example 8: Continuation within session - not new, not followup, not correction",
+    "_comment": "Example 8: Partial tagging - no agent_response available",
+    "_note": "This shows what to do when agent_response data is NOT available",
     "input": {
       "event_id": "evt_example_008",
-      "user_message": "now add it to the project board",
-      "timestamp": "2025-12-10T15:32:00",
-      "routed_instructions": ["github_project_status_workflow.instructions"]
+      "user_message": "run the tests",
+      "timestamp": "2025-12-10T20:00:00",
+      "routed_instructions": ["testing_standards.instructions"]
     },
     "output": {
       "event_id": "evt_example_008",
       "tags": {
-        "is_new_request": false,
+        "is_new_request": true,
         "is_followup": false,
         "is_correction": false,
+        "iteration_type": "none",
         "request_type": "action",
-        "expected_outcome": "issue_added_to_project_board",
-        "session_id": "session_001",
-        "request_sequence": 4,
+        "session_id": "session_006",
+        "request_sequence": 1,
+        "expected_outcome": "tests_executed_with_output",
+        "expected_first_pass_success": true,
+        "outcome_observed": "not_observable",
+        "context_sufficient": true,
         "confidence": "high",
-        "notes": "Continuation - 'now' indicates next step in sequence, not new task"
+        "requires_agent_response": true,
+        "notes": "Cannot assess outcome or anti-patterns without agent_response data"
       }
     }
   }
