@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 """
-Add tags to events in the eval database.
+Add collaboration tags to events in evaluation_results.db.
 
 Usage:
-    # Interactive mode (for humans)
-    python add_tags.py --db PATH --interactive
-    
-    # Batch mode (for LLM output)
     python add_tags.py --db PATH --input tags.jsonl --tagger "llm:codex"
 
 Examples:
     # Import tags from Codex tagging session
     python add_tags.py \
-        --db data/eval_tags.db \
+        --db ~/.observability_db/observability_db-learning/evaluation_results.db \
         --input tagged_by_codex.jsonl \
         --tagger "llm:codex"
 """
@@ -21,7 +17,6 @@ import argparse
 import sqlite3
 import json
 from pathlib import Path
-from datetime import datetime
 
 
 def add_tags_from_jsonl(
@@ -29,10 +24,10 @@ def add_tags_from_jsonl(
     input_path: Path,
     tagger_id: str
 ) -> dict:
-    """Import tags from JSONL file.
+    """Import collaboration tags from JSONL file.
     
     Args:
-        db_path: Path to eval_tags database
+        db_path: Path to evaluation_results.db
         input_path: Path to JSONL file with tags
         tagger_id: Identifier for who/what tagged (e.g., 'llm:codex')
         
@@ -42,11 +37,21 @@ def add_tags_from_jsonl(
     stats = {
         'total': 0,
         'imported': 0,
+        'event_not_found': 0,
         'errors': []
     }
     
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+    
+    # Verify collaboration_tags table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='collaboration_tags'")
+    if not cursor.fetchone():
+        stats['errors'].append(
+            "collaboration_tags table not found. Run: python scripts/apply_schema.py --db PATH"
+        )
+        conn.close()
+        return stats
     
     with open(input_path) as f:
         for line_num, line in enumerate(f, 1):
@@ -61,39 +66,28 @@ def add_tags_from_jsonl(
             event_id = data.get('event_id', '')
             tags = data.get('tags', {})
             
-            # Find event in database
-            # event_id format: evt_NNNNNN -> source_event_id = NNNNNN
-            try:
-                source_id = int(event_id.replace('evt_', ''))
-            except ValueError:
-                stats['errors'].append(f"Line {line_num}: Invalid event_id format: {event_id}")
-                continue
-            
+            # Verify event exists in evaluation_dataset
             cursor.execute(
-                "SELECT id FROM events WHERE source_event_id = ?",
-                (source_id,)
+                "SELECT event_id FROM evaluation_dataset WHERE event_id = ?",
+                (event_id,)
             )
-            result = cursor.fetchone()
-            
-            if not result:
-                stats['errors'].append(f"Line {line_num}: Event not found: {event_id}")
+            if not cursor.fetchone():
+                stats['event_not_found'] += 1
                 continue
-            
-            db_event_id = result[0]
             
             # Get next tag version for this event+tagger
             cursor.execute(
-                "SELECT COALESCE(MAX(tag_version), 0) + 1 FROM tags WHERE event_id = ? AND tagger_id = ?",
-                (db_event_id, tagger_id)
+                "SELECT COALESCE(MAX(tag_version), 0) + 1 FROM collaboration_tags WHERE event_id = ? AND tagger_id = ?",
+                (event_id, tagger_id)
             )
             next_version = cursor.fetchone()[0]
             
             try:
                 cursor.execute("""
-                    INSERT INTO tags (
+                    INSERT INTO collaboration_tags (
                         event_id,
                         is_new_request,
-                        session_id,
+                        tagged_session_id,
                         request_sequence,
                         is_followup,
                         is_correction,
@@ -109,16 +103,18 @@ def add_tags_from_jsonl(
                         preventive_instruction_was_routed,
                         context_sufficient,
                         missing_context,
+                        agent_response,
+                        agent_response_source,
                         confidence,
                         notes,
                         requires_agent_response,
                         tagger_id,
                         tag_version
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    db_event_id,
+                    event_id,
                     tags.get('is_new_request'),
-                    tags.get('session_id'),
+                    tags.get('session_id'),  # Maps to tagged_session_id
                     tags.get('request_sequence'),
                     tags.get('is_followup'),
                     tags.get('is_correction'),
@@ -134,6 +130,8 @@ def add_tags_from_jsonl(
                     tags.get('preventive_instruction_was_routed'),
                     tags.get('context_sufficient'),
                     tags.get('missing_context'),
+                    tags.get('agent_response'),
+                    tags.get('agent_response_source'),
                     tags.get('confidence'),
                     tags.get('notes'),
                     tags.get('requires_agent_response'),
@@ -152,8 +150,8 @@ def add_tags_from_jsonl(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Add tags to eval database')
-    parser.add_argument('--db', type=Path, required=True, help='Eval database path')
+    parser = argparse.ArgumentParser(description='Add collaboration tags to eval database')
+    parser.add_argument('--db', type=Path, required=True, help='Path to evaluation_results.db')
     parser.add_argument('--input', type=Path, required=True, help='JSONL file with tags')
     parser.add_argument('--tagger', type=str, required=True,
                         help='Tagger identifier (e.g., "llm:codex", "human:max")')
@@ -173,6 +171,7 @@ def main():
     print(f"\nTag Import Statistics:")
     print(f"  Total lines: {stats['total']}")
     print(f"  Imported: {stats['imported']}")
+    print(f"  Event not found: {stats['event_not_found']}")
     
     if stats['errors']:
         print(f"\nErrors ({len(stats['errors'])}):\n")
