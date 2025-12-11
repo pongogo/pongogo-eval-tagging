@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Pongogo Eval Event Tags",
-  "description": "Schema for tagging routing events with conversation and outcome metadata",
+  "title": "Pongogo Eval Event Tags - Epic #234 Aligned",
+  "description": "Schema for tagging routing events per Epic #234 requirements: conversation boundaries, iteration indicators, and outcome quality",
   "type": "object",
   "required": ["event_id", "tags"],
   "properties": {
@@ -11,46 +11,99 @@
     },
     "tags": {
       "type": "object",
-      "required": ["is_new_request", "is_followup", "is_correction", "request_type", "session_id", "request_sequence"],
+      "required": [
+        "is_new_request",
+        "is_followup",
+        "is_correction",
+        "request_type",
+        "session_id",
+        "request_sequence"
+      ],
       "properties": {
         "is_new_request": {
           "type": "boolean",
-          "description": "True if this is the START of a new task/conversation. False if continuation of existing task."
-        },
-        "is_followup": {
-          "type": "boolean",
-          "description": "True if user is asking about a previous response (e.g., 'did you do X?', 'what about Y?'). Indicates iteration."
-        },
-        "is_correction": {
-          "type": "boolean",
-          "description": "True if user is correcting agent behavior (e.g., 'no, I meant...', 'that's wrong'). Indicates failure."
-        },
-        "request_type": {
-          "type": "string",
-          "enum": ["procedural", "query", "action", "meta", "unclear"],
-          "description": "Type of request: procedural (multi-step process), query (information request), action (single action), meta (about the system), unclear (ambiguous)"
-        },
-        "expected_outcome": {
-          "type": "string",
-          "description": "What should happen if routing succeeds? Be specific. Examples: 'issue_closed_with_checklist', 'file_contents_displayed', 'commit_created'"
+          "description": "CONVERSATION BOUNDARY (Epic #234 Gap #1): True if START of new task/conversation. Key for measuring 'conversation length'."
         },
         "session_id": {
           "type": "string",
-          "description": "Identifier grouping related events into a conversation. Format: session_NNN"
+          "description": "CONVERSATION BOUNDARY: Groups related events. Format: session_NNN. Enables 'expected conversation length' measurement."
         },
         "request_sequence": {
           "type": "integer",
           "minimum": 1,
-          "description": "Position within session (1 = first request, 2 = second, etc.). Must be monotonically increasing within session."
+          "description": "CONVERSATION BOUNDARY: Position within session (1, 2, 3...). Enables iteration counting per Epic #234."
+        },
+        "is_followup": {
+          "type": "boolean",
+          "description": "ITERATION INDICATOR (Epic #234 Phase 2): User asking about previous response ('did you do X?'). Indicates agent work being checked."
+        },
+        "is_correction": {
+          "type": "boolean",
+          "description": "ITERATION INDICATOR: User correcting agent ('no, I meant...'). Indicates failure - agent did wrong thing."
+        },
+        "iteration_type": {
+          "type": "string",
+          "enum": ["none", "clarification", "correction", "retry", "refinement"],
+          "description": "ITERATION TYPE: none (first attempt), clarification (more info needed), correction (agent wrong), retry (ask again), refinement (adjust)"
+        },
+        "request_type": {
+          "type": "string",
+          "enum": ["procedural", "query", "action", "meta", "unclear"],
+          "description": "REQUEST TYPE: procedural (multi-step), query (info request), action (single), meta (about system), unclear (ambiguous)"
+        },
+        "expected_outcome": {
+          "type": "string",
+          "description": "OUTCOME (Epic #234 Gap #2): What should happen? Be specific: 'issue_closed_with_checklist', 'file_created'"
+        },
+        "expected_first_pass_success": {
+          "type": "boolean",
+          "description": "OUTCOME: Should agent succeed on first attempt with good routing? True if straightforward, False if complex/ambiguous."
+        },
+        "outcome_observed": {
+          "type": "string",
+          "enum": ["success", "partial", "failure", "unknown", "not_observable"],
+          "description": "OUTCOME: What actually happened? NOTE: Requires agent_response data (not in current DB)."
+        },
+        "outcome_notes": {
+          "type": "string",
+          "description": "OUTCOME: Details about partial/failure cases."
+        },
+        "anti_pattern_detected": {
+          "type": "boolean",
+          "description": "ANTI-PATTERN (Epic #234 Future): Did agent exhibit anti-pattern? NOTE: Requires agent_response data."
+        },
+        "anti_pattern_type": {
+          "type": "string",
+          "description": "ANTI-PATTERN: Type if detected: 'time_estimate_in_output', 'skipped_checklist', 'memory_over_routing'"
+        },
+        "preventive_instruction": {
+          "type": "string",
+          "description": "ANTI-PATTERN: Which instruction should have prevented this? e.g., 'time_free_project_management.instructions.md'"
+        },
+        "preventive_instruction_was_routed": {
+          "type": "boolean",
+          "description": "ANTI-PATTERN: Was preventive instruction routed? Yes+anti-pattern=instruction quality issue. No=routing failure."
+        },
+        "context_sufficient": {
+          "type": "boolean",
+          "description": "CONTEXT COMPLETENESS (Epic #234 Goal #3): Was everything needed available on first request?"
+        },
+        "missing_context": {
+          "type": "string",
+          "description": "CONTEXT: What was missing? e.g., 'file path not specified', 'ambiguous reference'"
         },
         "confidence": {
           "type": "string",
           "enum": ["high", "medium", "low"],
-          "description": "Tagger's confidence in this annotation. Use 'low' when context is insufficient."
+          "description": "METADATA: Tagger's confidence in this annotation."
         },
         "notes": {
           "type": "string",
-          "description": "Optional notes explaining tagging decision, especially for edge cases"
+          "description": "METADATA: Notes explaining tagging decisions."
+        },
+        "requires_agent_response": {
+          "type": "boolean",
+          "description": "METADATA: True if event needs agent_response data for complete tagging (outcome, anti-pattern fields)."
         }
       }
     }
